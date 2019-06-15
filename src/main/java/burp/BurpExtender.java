@@ -90,11 +90,11 @@ public class BurpExtender implements IBurpExtender, IContextMenuFactory, ActionL
     
 	public void actionPerformed(ActionEvent event) {
 		String command = event.getActionCommand();
-		if (command.equals("signme")) {
-			stdout = new PrintWriter(callbacks.getStdout(), true);
+		stdout = new PrintWriter(callbacks.getStdout(), true);
+		IHttpRequestResponse[] selectedItems = currentInvocation.getSelectedMessages();
+		byte selectedInvocationContext = currentInvocation.getInvocationContext();
 
-			IHttpRequestResponse[] selectedItems = currentInvocation.getSelectedMessages();
-			byte selectedInvocationContext = currentInvocation.getInvocationContext();
+		if (command.equals("signme")) {
 			
 			try {
 				
@@ -143,9 +143,7 @@ public class BurpExtender implements IBurpExtender, IContextMenuFactory, ActionL
 			}
 			
 		}else if (command.equals("encme")){
-			IHttpRequestResponse[] selectedItems = currentInvocation.getSelectedMessages();
 			int[] selectedBounds = currentInvocation.getSelectionBounds();
-			byte selectedInvocationContext = currentInvocation.getInvocationContext();
 			
 			try {
 				
@@ -181,9 +179,7 @@ public class BurpExtender implements IBurpExtender, IContextMenuFactory, ActionL
 				
 			}
 		}else if (command.equals("decme")){
-			IHttpRequestResponse[] selectedItems = currentInvocation.getSelectedMessages();
 			int[] selectedBounds = currentInvocation.getSelectionBounds();
-			byte selectedInvocationContext = currentInvocation.getInvocationContext();
 			
 			try {
 				
