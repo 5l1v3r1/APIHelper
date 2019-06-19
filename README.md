@@ -1,4 +1,5 @@
 # APIHelper
+- Only show DecryptMe when context is in Response of Request, or View mode.
 - Added AutoSign with checkbox to sign the data when do EncryptMe.
 - Implemented AES enc/dec and custom sign method.
 
@@ -28,7 +29,6 @@ This is of a custom requirement, you have to re-implement yours if you need this
 
     With `Enable auto SignMe while do EncryptMe using custom sign method` checked, you can use your customized sign method to sign the data. Need to modify the source code to your need.
     You can disable this checkbox if you don't need it.
-4. Only show DecryptMe when context is in Response of Request, or View mode.
 
 ## Install
 1. clone the source
