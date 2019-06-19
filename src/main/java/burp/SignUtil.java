@@ -17,9 +17,6 @@ import javax.crypto.spec.SecretKeySpec;
 public class SignUtil {
 	private static final String defaultCharset = "UTF-8";
 	private static final String KEY_AES = "AES";
-	public static final String KEY_TEST = "563B48F0A4DCDB36A5C92E68189AD522";
-	public static final String head_pass = "F2F66AAEA4B7C7982192CA2E3FFBA9E2";
-	public static final String owner = "PSBC";
 	
 	/**
 	 * 加密
@@ -161,32 +158,7 @@ public class SignUtil {
 	}
 
   public static void main(String[] args) throws Exception {    
-      String content = "张三丰";    
-      System.out.println("加密前：" + content);    
-      System.out.println("加密密钥和解密密钥：" + KEY_TEST);    
-      String encrypt = encrypt(content, KEY_TEST);    
-      System.out.println("加密后：" + encrypt);    
-      String decrypt = decrypt(encrypt, KEY_TEST);    
-      System.out.println("解密后：" + decrypt);
-      
-      System.out.println("签名信息" );
-      // 时间戳
-      Long date = new Date().getTime();
-      System.out.println("date: " + date);
-      // 发送body的数据长度
-      int length = 123123;
-      // 构造待加密sign字符串
-      String toSignStr = date.toString()+String.valueOf(length)+head_pass;
-      System.out.println("toSignStr: " + toSignStr);
-      // 对待加密sign字符串进行加密
-      String encryptedSign = signBySHA256(toSignStr);
-      // 拼接owner组成完整签名字符串
-      String signStr = owner+":"+encryptedSign;
-      System.out.println(signStr);
-      
-      String v7 = "/ifp314/api/111118.app";
-      String v0 = v7.substring(v7.lastIndexOf("api/") + 4, v7.lastIndexOf(".app"));
-      System.out.println(v0);
+      System.out.println("Testing");
   }    
 	
 }
