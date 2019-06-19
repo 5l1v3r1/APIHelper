@@ -487,37 +487,64 @@ public class BurpExtender implements IBurpExtender, IContextMenuFactory, ActionL
 	public List<JMenuItem> createMenuItems(final IContextMenuInvocation invocation) {
     	
 		
-    	
-    	currentInvocation = invocation;
-
-    	List<JMenuItem> listMenuItems = new ArrayList<JMenuItem>();
-        // 菜单只在 REPEATER 工具的右键菜单中显示
-		//子菜单
-		JMenuItem menuItem;
-		menuItem = new JMenuItem("SignMe!");  
-		menuItem.setActionCommand("signme");
-		menuItem.addActionListener(this);
+		if(invocation.getInvocationContext() == IContextMenuInvocation.CONTEXT_MESSAGE_EDITOR_REQUEST ||
+		   invocation.getInvocationContext() == IContextMenuInvocation.CONTEXT_MESSAGE_EDITOR_RESPONSE) {
+	    	currentInvocation = invocation;
+	
+	    	List<JMenuItem> listMenuItems = new ArrayList<JMenuItem>();
+	        // 菜单只在 REPEATER 工具的右键菜单中显示
+			//子菜单
+			JMenuItem menuItem;
+			menuItem = new JMenuItem("SignMe!");  
+			menuItem.setActionCommand("signme");
+			menuItem.addActionListener(this);
+			
+			JMenuItem menuItem2;
+			menuItem2 = new JMenuItem("EncryptMe");  
+			menuItem2.setActionCommand("encme");
+			menuItem2.addActionListener(this);
+			
+			JMenuItem menuItem3;
+			menuItem3 = new JMenuItem("DecryptMe");  
+			menuItem3.setActionCommand("decme");
+			menuItem3.addActionListener(this);
+	
+			//父级菜单
+			JMenu jMenu = new JMenu("APIHelper - AES");
+			
+			jMenu.add(menuItem3); 
+			jMenu.add(menuItem2);
+			jMenu.add(menuItem);
+			
+			listMenuItems.add(jMenu);
+	
+	        return listMenuItems;
+		} else if(invocation.getInvocationContext() == IContextMenuInvocation.CONTEXT_MESSAGE_VIEWER_REQUEST ||
+				  invocation.getInvocationContext() == IContextMenuInvocation.CONTEXT_MESSAGE_VIEWER_RESPONSE) {
+			currentInvocation = invocation;
+			
+	    	List<JMenuItem> listMenuItems = new ArrayList<JMenuItem>();
+	        // 菜单只在 REPEATER-view request response 工具的右键菜单中显示
+			//子菜单
+			
+			JMenuItem menuItem3;
+			menuItem3 = new JMenuItem("DecryptMe");  
+			menuItem3.setActionCommand("decme");
+			menuItem3.addActionListener(this);
+	
+			//父级菜单
+			JMenu jMenu = new JMenu("APIHelper - AES");
 		
-		JMenuItem menuItem2;
-		menuItem2 = new JMenuItem("EncryptMe");  
-		menuItem2.setActionCommand("encme");
-		menuItem2.addActionListener(this);
+			jMenu.add(menuItem3); 
+			
+			listMenuItems.add(jMenu);
+	
+	        return listMenuItems;
+		}else {
 		
-		JMenuItem menuItem3;
-		menuItem3 = new JMenuItem("DecryptMe");  
-		menuItem3.setActionCommand("decme");
-		menuItem3.addActionListener(this);
-
-		//父级菜单
-		JMenu jMenu = new JMenu("APIHelper - AES");
-		
-		jMenu.add(menuItem3); 
-		jMenu.add(menuItem2);
-		jMenu.add(menuItem);
-		
-		listMenuItems.add(jMenu);
-
-        return listMenuItems;
+			return null;
+			
+		}
     }
 	
 	public void signMe() {
