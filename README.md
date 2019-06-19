@@ -1,5 +1,6 @@
 # APIHelper
-Implemented AES enc/dec and custom sign method.
+- Added AutoSign with checkbox to sign the data when do EncryptMe.
+- Implemented AES enc/dec and custom sign method.
 
 ## Thanks and Credit to:
 This plugin is sort of a enforcing the original `aes-payloads`[https://github.com/portswigger/aes-payloads] of PortSwigger, which is an extender for AES enc/dec and it's working on seperate TAB and Intruder.

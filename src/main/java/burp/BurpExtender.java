@@ -10,6 +10,7 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.PrintWriter;
 import java.security.Key;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -17,6 +18,8 @@ import java.util.Iterator;
 import java.util.List;
 
 import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import javax.swing.DefaultComboBoxModel;
@@ -64,12 +67,14 @@ public class BurpExtender implements IBurpExtender, IContextMenuFactory, ActionL
     private JLabel lblCiphertext;
     
     public Boolean isURLEncoded;
+    public Boolean isAutoSign = false;
     
     private JLabel lbl4;
     private JComboBox comboEncoding;
+    //private Bool autoSign;
 	
 	public BurpExtender() {
-		this.name = "Sign Me!";
+		this.name = "APIHelper";
 		this.version = "0.1";
 	}
 	
@@ -158,14 +163,49 @@ public class BurpExtender implements IBurpExtender, IContextMenuFactory, ActionL
     	gbc_parameterAESIV.gridy = 2;
     	panel.add(parameterAESIV, gbc_parameterAESIV);
     	
-    	chckbxNewCheckBox = new JCheckBox("IV block in Ciphertext (not yet working)");
-    	chckbxNewCheckBox.setEnabled(false);
-    	GridBagConstraints gbc_chckbxNewCheckBox = new GridBagConstraints();
-    	gbc_chckbxNewCheckBox.fill = GridBagConstraints.HORIZONTAL;
-    	gbc_chckbxNewCheckBox.insets = new Insets(0, 0, 5, 0);
-    	gbc_chckbxNewCheckBox.gridx = 1;
-    	gbc_chckbxNewCheckBox.gridy = 3;
-    	panel.add(chckbxNewCheckBox, gbc_chckbxNewCheckBox);
+//    	chckbxNewCheckBox = new JCheckBox("IV block in Ciphertext (not yet working)");
+//    	chckbxNewCheckBox.setEnabled(false);
+//    	GridBagConstraints gbc_chckbxNewCheckBox = new GridBagConstraints();
+//    	gbc_chckbxNewCheckBox.fill = GridBagConstraints.HORIZONTAL;
+//    	gbc_chckbxNewCheckBox.insets = new Insets(0, 0, 5, 0);
+//    	gbc_chckbxNewCheckBox.gridx = 1;
+//    	gbc_chckbxNewCheckBox.gridy = 3;
+//    	panel.add(chckbxNewCheckBox, gbc_chckbxNewCheckBox);
+    	
+    	chckbxNewCheckBox = new JCheckBox("Enable auto SignMe while do EncryptMe using custom sign method");
+    	chckbxNewCheckBox.setEnabled(true);
+    	// set a property for later check whether this is enabled or not
+    	
+    	chckbxNewCheckBox.addActionListener(new ActionListener(){
+            public void actionPerformed(ActionEvent e){
+                if(chckbxNewCheckBox.isSelected()) {
+                	isAutoSign = true;
+                }else {
+                	isAutoSign = false;
+                }
+            }
+        });
+    	
+    	GridBagConstraints autoSignBox = new GridBagConstraints();
+    	autoSignBox.fill = GridBagConstraints.HORIZONTAL;
+    	autoSignBox.insets = new Insets(0, 0, 5, 0);
+    	autoSignBox.gridx = 1;
+    	autoSignBox.gridy = 3;
+    	panel.add(chckbxNewCheckBox, autoSignBox);
+    	
+    	
+
+//    	comboAESMode = new JComboBox();
+//    	comboAESMode.addPropertyChangeListener(new PropertyChangeListener() {
+//    		public void propertyChange(PropertyChangeEvent arg0) {
+//    			String cmode = (String)comboAESMode.getSelectedItem();
+//    			if (cmode.contains("CBC")) {
+//    				parameterAESIV.setEditable(true);
+//    			} else {
+//    				parameterAESIV.setEditable(false);
+//    			}
+//    		}
+//    	});
     	
     	lbl4 = new JLabel("Ciphertext encoding:");
     	lbl4.setHorizontalAlignment(SwingConstants.RIGHT);
@@ -206,7 +246,7 @@ public class BurpExtender implements IBurpExtender, IContextMenuFactory, ActionL
     			}
     		}
     	});
-    	comboAESMode.setModel(new DefaultComboBoxModel(new String[] {"AES/CBC/NoPadding", "AES/CBC/PKCS5Padding", "AES/ECB/NoPadding", "AES/ECB/PKCS5Padding"}));
+    	comboAESMode.setModel(new DefaultComboBoxModel(new String[] {"AES/CBC/NoPadding", "AES/CBC/PKCS5Padding", "AES/ECB/NoPadding", "AES/ECB/PKCS5Padding", "AES"}));
     	comboAESMode.setSelectedIndex(1);
     	GridBagConstraints gbc_comboAESMode = new GridBagConstraints();
     	gbc_comboAESMode.insets = new Insets(0, 0, 5, 0);
@@ -259,7 +299,8 @@ public class BurpExtender implements IBurpExtender, IContextMenuFactory, ActionL
     	btnNewButton.addActionListener(new ActionListener() {
     		public void actionPerformed(ActionEvent arg0) {		
     	        try {
-    	        	textAreaCiphertext.setText(encrypt(textAreaPlaintext.getText()));
+    	        		textAreaCiphertext.setText(encrypt(textAreaPlaintext.getText()));
+    	        	
     	        } catch(Exception e) {
     	        	callbacks.issueAlert(e.toString());
     	        }
@@ -340,7 +381,7 @@ public class BurpExtender implements IBurpExtender, IContextMenuFactory, ActionL
 			data += Integer.toHexString((b[i] >> 4) & 0xf);
 			data += Integer.toHexString(b[i] & 0xf);
 		}
-		return data;
+		return data.toUpperCase();
 	}
     
     public String encrypt(String plainText) throws Exception {
@@ -352,17 +393,32 @@ public class BurpExtender implements IBurpExtender, IContextMenuFactory, ActionL
     	IvParameterSpec ivSpec = new IvParameterSpec(iv);
 
         String cmode = (String)comboAESMode.getSelectedItem();
+        //stdout.println("cmode: "+cmode);
+        Cipher cipher;
         
-        Cipher cipher = Cipher.getInstance((String)comboAESMode.getSelectedItem());
-        if (cmode.contains("CBC")) {
-        	cipher.init(Cipher.ENCRYPT_MODE, skeySpec, ivSpec);
-        } else {
-        	cipher.init(Cipher.ENCRYPT_MODE, skeySpec);
+        if (cmode.equals("AES")) {
+        	KeyGenerator kgen = KeyGenerator.getInstance("AES");
+			SecureRandom random = SecureRandom.getInstance("SHA1PRNG");
+			random.setSeed(keyValue);
+			kgen.init(128, random);
+			SecretKey secretKey = kgen.generateKey();
+			byte[] enCodeFormat = secretKey.getEncoded();
+//			 String x =  burp.SignUtil.parseByte2HexStr(enCodeFormat);
+//	          stdout.println("x:"+x);
+			SecretKeySpec keySpec = new SecretKeySpec(enCodeFormat, "AES");
+			cipher = Cipher.getInstance("AES");// 创建密码器
+			cipher.init(Cipher.ENCRYPT_MODE, keySpec);// 初始化
+        }else {
+        	cipher = Cipher.getInstance((String)comboAESMode.getSelectedItem());
+        	if (cmode.contains("CBC")) {
+            	cipher.init(Cipher.ENCRYPT_MODE, skeySpec, ivSpec);
+            }else {
+            	cipher.init(Cipher.ENCRYPT_MODE, skeySpec);
+            }
         }
 
         byte[] encVal = cipher.doFinal(plainText.getBytes());
 
-        // This wont work for http requests either output ascii hex or url encoded values
         String encryptedValue = new String(encVal, "UTF-8");
         
         switch (comboEncoding.getSelectedItem().toString()) {
@@ -385,13 +441,29 @@ public class BurpExtender implements IBurpExtender, IContextMenuFactory, ActionL
         IvParameterSpec ivSpec = new IvParameterSpec(iv);
         
         String cmode = (String)comboAESMode.getSelectedItem();
-    	
-        Cipher cipher = Cipher.getInstance(cmode);
-        if (cmode.contains("CBC")) {
-        	cipher.init(Cipher.DECRYPT_MODE, skeySpec, ivSpec);
-        } else {
-        	cipher.init(Cipher.DECRYPT_MODE, skeySpec);
+        Cipher cipher;
+        
+        if (cmode.equals("AES")) {
+        	KeyGenerator kgen = KeyGenerator.getInstance("AES");
+			SecureRandom random = SecureRandom.getInstance("SHA1PRNG");
+			random.setSeed(keyValue);
+			kgen.init(128, random);
+			SecretKey secretKey = kgen.generateKey();
+			byte[] enCodeFormat = secretKey.getEncoded();
+//			 String x =  burp.SignUtil.parseByte2HexStr(enCodeFormat);
+//	          stdout.println("x:"+x);
+			SecretKeySpec keySpec = new SecretKeySpec(enCodeFormat, "AES");
+			cipher = Cipher.getInstance("AES");// 创建密码器
+			cipher.init(Cipher.DECRYPT_MODE, keySpec);// 初始化
+        }else {
+        	cipher = Cipher.getInstance(cmode);
+        	if (cmode.contains("CBC")) {
+            	cipher.init(Cipher.DECRYPT_MODE, skeySpec, ivSpec);
+            }else {
+            	cipher.init(Cipher.DECRYPT_MODE, skeySpec);
+            }
         }
+    	
         
         byte [] cipherbytes = ciphertext.getBytes();
         
@@ -405,7 +477,7 @@ public class BurpExtender implements IBurpExtender, IContextMenuFactory, ActionL
         }
         
         byte[] original = cipher.doFinal(cipherbytes);
-        return new String(original);
+        return new String(original, "utf-8");
     	
     }
 
@@ -446,6 +518,62 @@ public class BurpExtender implements IBurpExtender, IContextMenuFactory, ActionL
 
         return listMenuItems;
     }
+	
+	public void signMe() {
+		stdout = new PrintWriter(callbacks.getStdout(), true);
+		IHttpRequestResponse[] selectedItems = currentInvocation.getSelectedMessages();
+		byte selectedInvocationContext = currentInvocation.getInvocationContext();
+		
+		try {
+			
+			byte[] selectedRequestOrResponse = null;
+			if(selectedInvocationContext == IContextMenuInvocation.CONTEXT_MESSAGE_EDITOR_REQUEST) {
+				selectedRequestOrResponse = selectedItems[0].getRequest();
+			}
+			
+			IRequestInfo analyzeRequest = helpers.analyzeRequest(selectedRequestOrResponse);
+			List<String> headers = analyzeRequest.getHeaders();
+			
+			// 删除已存在的sign与date头
+			Iterator<String> it = headers.iterator();
+			while(it.hasNext()){
+			    String x = it.next();
+			    if(x.startsWith("Date") || x.startsWith("Sign")){
+			        it.remove();
+			    }
+			}
+			
+			String request = new String(selectedRequestOrResponse);
+			byte[] body = request.substring(analyzeRequest.getBodyOffset()).getBytes();
+			
+			// 时间戳
+	        Long date = new Date().getTime();
+	        stdout.println("date: "+date);
+	        // 发送body的数据长度
+	        int length = body.length;
+	        stdout.println("length: "+length);
+	        // 构造待加密sign字符串
+	        String toSignStr = date.toString()+String.valueOf(length)+burp.SignUtil.head_pass;
+	        stdout.println("toSignStr: "+toSignStr);
+	        // 对待加密sign字符串进行加密
+	        String encryptedSign = burp.SignUtil.signBySHA256(toSignStr);
+	        stdout.println("encryptedSign: "+encryptedSign);
+	        // 拼接owner组成完整签名字符串
+	        String signStr = burp.SignUtil.owner+":"+encryptedSign;
+	        stdout.println("signStr: "+signStr);
+	        
+			headers.add("Sign:"+signStr);
+			headers.add("Date:"+date);
+			
+			
+			byte[] newRequest = helpers.buildHttpMessage(headers, body);
+			selectedItems[0].setRequest(newRequest);
+		} catch (Exception e) {
+			
+			stdout.println("Exception with custom context application");
+			
+		}
+	}
     
 	public void actionPerformed(ActionEvent event) {
 		String command = event.getActionCommand();
@@ -455,51 +583,12 @@ public class BurpExtender implements IBurpExtender, IContextMenuFactory, ActionL
 
 		if (command.equals("signme")) {
 			
-			try {
-				
-				byte[] selectedRequestOrResponse = null;
-				if(selectedInvocationContext == IContextMenuInvocation.CONTEXT_MESSAGE_EDITOR_REQUEST) {
-					selectedRequestOrResponse = selectedItems[0].getRequest();
-				}
-				
-				IRequestInfo analyzeRequest = helpers.analyzeRequest(selectedRequestOrResponse);
-				List<String> headers = analyzeRequest.getHeaders();
-				
-				// 删除已存在的sign与date头
-				Iterator<String> it = headers.iterator();
-				while(it.hasNext()){
-				    String x = it.next();
-				    if(x.startsWith("Date") || x.startsWith("Sign")){
-				        it.remove();
-				    }
-				}
-				
-				String request = new String(selectedRequestOrResponse);
-				byte[] body = request.substring(analyzeRequest.getBodyOffset()).getBytes();
-				
-				// 时间戳
-		        Long date = new Date().getTime();
-		        System.out.println("date: "+date);
-		        // 发送body的数据长度
-		        int length = body.length;
-		        // 构造待加密sign字符串
-		        String toSignStr = date+length+burp.SignUtil.head_pass;
-		        // 对待加密sign字符串进行加密
-		        String encryptedSign = burp.SignUtil.signBySHA256(toSignStr);
-		        // 拼接owner组成完整签名字符串
-		        String signStr = burp.SignUtil.owner+":"+encryptedSign;
-		        
-				headers.add("Sign:"+signStr);
-				headers.add("Date:"+date);
-				
-				
-				byte[] newRequest = helpers.buildHttpMessage(headers, body);
-				selectedItems[0].setRequest(newRequest);
-			} catch (Exception e) {
-				
-				stdout.println("Exception with custom context application");
-				
-			}
+			// The signme function is abstracted as another public mehod of class,
+			// so that we can call it everytime together with Encrypt
+			
+			this.signMe();
+			
+			
 			
 		}else if (command.equals("encme")){
 			int[] selectedBounds = currentInvocation.getSelectionBounds();
@@ -521,7 +610,7 @@ public class BurpExtender implements IBurpExtender, IContextMenuFactory, ActionL
 				
 				try {
 					stdout.println("Data to encrypt: "+helpers.bytesToString(selectedPortion));
-					//s = burp.AESUtil.encrypt(helpers.bytesToString(selectedPortion), burp.AESUtil.KEY);
+					//s = burp.SignUtil.encrypt(helpers.bytesToString(selectedPortion), burp.SignUtil.KEY);
 					s = this.encrypt(helpers.bytesToString(selectedPortion));//, burp.AESUtil.KEY);
 				} catch (Exception e) {
 					stdout.println(e);
@@ -532,6 +621,11 @@ public class BurpExtender implements IBurpExtender, IContextMenuFactory, ActionL
 				newRequest = ArrayUtils.addAll(newRequest, postSelectedPortion);
 				
 				selectedItems[0].setRequest(newRequest);
+				// get autoSignBox is enabled or not
+				if(this.isAutoSign) {
+					stdout.println("AutoSign Enabled!");
+					this.signMe();
+				}
 			
 			} catch (Exception e) {
 				
@@ -558,7 +652,7 @@ public class BurpExtender implements IBurpExtender, IContextMenuFactory, ActionL
 
 				try {
 					stdout.println("Data to decrypt: "+helpers.bytesToString(selectedPortion));
-					//s = burp.AESUtil.decrypt(helpers.bytesToString(selectedPortion), burp.AESUtil.KEY);
+					//s = burp.SignUtil.decrypt(helpers.bytesToString(selectedPortion), burp.SignUtil.KEY);
 					s = this.decrypt(helpers.bytesToString(selectedPortion));//, burp.AESUtil.KEY);
 				} catch (Exception e) {
 					stdout.println(e);
