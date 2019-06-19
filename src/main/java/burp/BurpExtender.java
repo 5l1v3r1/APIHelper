@@ -29,8 +29,10 @@ import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 //import burp.AESUtil;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
@@ -484,8 +486,7 @@ public class BurpExtender implements IBurpExtender, IContextMenuFactory, ActionL
 	
 	public List<JMenuItem> createMenuItems(final IContextMenuInvocation invocation) {
     	
-    	if(invocation.getInvocationContext() == IContextMenuInvocation.CONTEXT_MESSAGE_EDITOR_REQUEST ||
-    			   invocation.getInvocationContext() == IContextMenuInvocation.CONTEXT_MESSAGE_EDITOR_RESPONSE)
+		
     	
     	currentInvocation = invocation;
 
@@ -640,29 +641,71 @@ public class BurpExtender implements IBurpExtender, IContextMenuFactory, ActionL
 				byte[] selectedRequestOrResponse = null;
 				if(selectedInvocationContext == IContextMenuInvocation.CONTEXT_MESSAGE_EDITOR_REQUEST) {
 					selectedRequestOrResponse = selectedItems[0].getRequest();
-				} else {
+	//				} else {
+	//					selectedRequestOrResponse = selectedItems[0].getResponse();
+	//				}
+					
+					byte[] preSelectedPortion = Arrays.copyOfRange(selectedRequestOrResponse, 0, selectedBounds[0]);
+					byte[] selectedPortion = Arrays.copyOfRange(selectedRequestOrResponse, selectedBounds[0], selectedBounds[1]);
+					byte[] postSelectedPortion = Arrays.copyOfRange(selectedRequestOrResponse, selectedBounds[1], selectedRequestOrResponse.length);
+					
+					String s = "init data";
+	
+					try {
+						stdout.println("Data to decrypt: "+helpers.bytesToString(selectedPortion));
+						//s = burp.SignUtil.decrypt(helpers.bytesToString(selectedPortion), burp.SignUtil.KEY);
+						s = this.decrypt(helpers.bytesToString(selectedPortion));//, burp.AESUtil.KEY);
+					} catch (Exception e) {
+						stdout.println(e);
+					}
+				
+					
+					byte[] newRequest = ArrayUtils.addAll(preSelectedPortion, helpers.stringToBytes(s));
+					newRequest = ArrayUtils.addAll(newRequest, postSelectedPortion);
+					
+					selectedItems[0].setRequest(newRequest);
+				} else if(selectedInvocationContext == IContextMenuInvocation.CONTEXT_MESSAGE_VIEWER_REQUEST ||
+						selectedInvocationContext == IContextMenuInvocation.CONTEXT_MESSAGE_VIEWER_RESPONSE) { 
+				//else if(selectedInvocationContext == IContextMenuInvocation.CONTEXT_MESSAGE_VIEWER_REQUEST) {
+					stdout.println("Request Viewer");
 					selectedRequestOrResponse = selectedItems[0].getResponse();
-				}
+					byte[] preSelectedPortion = Arrays.copyOfRange(selectedRequestOrResponse, 0, selectedBounds[0]);
+					byte[] selectedPortion = Arrays.copyOfRange(selectedRequestOrResponse, selectedBounds[0], selectedBounds[1]);
+					byte[] postSelectedPortion = Arrays.copyOfRange(selectedRequestOrResponse, selectedBounds[1], selectedRequestOrResponse.length);
+					
+					String s = "init data";
+	
+					try {
+						stdout.println("Data to decrypt: "+helpers.bytesToString(selectedPortion));
+						//s = burp.SignUtil.decrypt(helpers.bytesToString(selectedPortion), burp.SignUtil.KEY);
+						s = this.decrypt(helpers.bytesToString(selectedPortion));//, burp.AESUtil.KEY);
+					} catch (Exception e) {
+						stdout.println(e);
+					}
 				
-				byte[] preSelectedPortion = Arrays.copyOfRange(selectedRequestOrResponse, 0, selectedBounds[0]);
-				byte[] selectedPortion = Arrays.copyOfRange(selectedRequestOrResponse, selectedBounds[0], selectedBounds[1]);
-				byte[] postSelectedPortion = Arrays.copyOfRange(selectedRequestOrResponse, selectedBounds[1], selectedRequestOrResponse.length);
-				
-				String s = "init data";
+					
+//					byte[] newResponse = ArrayUtils.addAll(preSelectedPortion, helpers.stringToBytes(s));
+//					newResponse = ArrayUtils.addAll(newResponse, postSelectedPortion);
+					String newRequestStr = s;
+					
+					SwingUtilities.invokeLater(new Runnable() {
+						
+			            @Override
+			            public void run() {
+			            	
+			            	JTextArea ta = new JTextArea(30, 60);
+			                ta.setText(newRequestStr);
+			                ta.setWrapStyleWord(true);
+			                ta.setLineWrap(true);
+			                ta.setCaretPosition(0);
+			                ta.setEditable(false);
 
-				try {
-					stdout.println("Data to decrypt: "+helpers.bytesToString(selectedPortion));
-					//s = burp.SignUtil.decrypt(helpers.bytesToString(selectedPortion), burp.SignUtil.KEY);
-					s = this.decrypt(helpers.bytesToString(selectedPortion));//, burp.AESUtil.KEY);
-				} catch (Exception e) {
-					stdout.println(e);
+			                JOptionPane.showMessageDialog(null, new JScrollPane(ta), "APIHelper Response Decrypt", JOptionPane.INFORMATION_MESSAGE);
+						    
+			            }
+			            
+					});
 				}
-			
-				
-				byte[] newRequest = ArrayUtils.addAll(preSelectedPortion, helpers.stringToBytes(s));
-				newRequest = ArrayUtils.addAll(newRequest, postSelectedPortion);
-				
-				selectedItems[0].setRequest(newRequest);
 			
 			} catch (Exception e) {
 				
